@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useReducer, useRef, useEffect } from 'react';
 
 const buttonStyles = {
     border: '1px solid #ccc',
@@ -9,21 +9,27 @@ const buttonStyles = {
     width: 200,
 };
 
-const useRunning = ({ initialRunningState = false }) => {
-    const [running, setRunning] = useState(initialRunningState);
-    const runningHandler = () => {
-        setRunning(() => !running);
-    };
-    return { running, runningHandler, setRunning };
+const initialState = {
+    running: false,
+    lapse: 0,
+};
+
+const reducer = (state, action) => {
+    switch (action.type) {
+        case 'LAPSE':
+            return { ...state, lapse: action.now - action.startTime };
+        case 'TOGGLE_RUNNING':
+            return { ...state, running: !state.running };
+        case 'CLEAR':
+            return initialState;
+        default:
+            return state;
+    }
 };
 
 const StopWatch = () => {
-    const [lapse, setLapse] = useState(0);
+    const [{ running, lapse }, dispatch] = useReducer(reducer, initialState);
     const intervalRef = useRef(null);
-
-    const { running, runningHandler, setRunning } = useRunning({
-        initialRunningState: false,
-    });
 
     useEffect(() => {
         return () => clearInterval(intervalRef.current);
@@ -31,8 +37,7 @@ const StopWatch = () => {
 
     const clearStopWatch = () => {
         clearInterval(intervalRef.current);
-        setLapse(0);
-        setRunning(false);
+        dispatch({ type: 'CLEAR' });
     };
 
     const runStopWatch = () => {
@@ -41,10 +46,10 @@ const StopWatch = () => {
         } else {
             const startTime = Date.now() - lapse;
             intervalRef.current = setInterval(() => {
-                setLapse(Date.now() - startTime);
+                dispatch({ type: 'LAPSE', now: Date.now(), startTime });
             }, 0);
         }
-        runningHandler();
+        dispatch({ type: 'TOGGLE_RUNNING' });
     };
 
     return (
